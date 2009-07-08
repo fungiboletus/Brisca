@@ -16,21 +16,19 @@ $joueurs = []
 class ListeParties < Mongrel::HttpHandler
 	
 	def process(request, response)
+
 		# Traitement des paramètres
 		if request.params["QUERY_STRING"]
-			#p CGI::unescape(request.params["QUERY_STRING"])
-			#p Base64.decode64 CGI::unescape request.params["QUERY_STRING"]
 			p = JSON.parse Base64.decode64 CGI::unescape request.params["QUERY_STRING"]
-			#p = Mongrel::HttpRequest.query_parse request.params["QUERY_STRING"]
 		else
 			p = {}
 		end
 
-		#p request.params["QUERY_STRING"]
-		p p
+		LOG.debug p
 		sleep 1	
+	
 		# Liste des parties demandées
-		if !p["id_joueur"] || p["id_joueur"].to_i != 42 || !p['action']
+		if !p["id_joueur"] || p["id_joueur"].to_i == 43 || !p['action']
 
 			obj = []
 
@@ -38,9 +36,10 @@ class ListeParties < Mongrel::HttpHandler
 				json = {
 					"id" => id,
 					"nom"=> partie.nom,
-					"organisateur"=> partie.organisateur,
-					"niveau"=>partie.niveau_organisateur,
-					"element"=>partie.element_organisateur
+					"organisateur"=> partie.organisateur.nom,
+					"id_organisateur"=>partie.organisateur.id,
+					"niveau"=>partie.organisateur.niveau,
+					"element"=>partie.organisateur.element
 				}
 
 				if partie.mdp.nil?
@@ -53,7 +52,6 @@ class ListeParties < Mongrel::HttpHandler
 			end
 		
 			ecrire JSON.pretty_generate(obj), response
-			#ecrire $parties.to_json, response
 			return
 		end
 
@@ -66,30 +64,76 @@ class ListeParties < Mongrel::HttpHandler
 			$joueurs[id_joueur] = joueur
 		end
 
+		# En fonction de ce qu'il faut faire
+		case p["action"]
+		
 		# Si il faut créer une nouvelle partie
-		if p["action"] == "nouvelle_partie" && p["nom_partie"]
-			partie = Partie.new $parties.size, p["nom_partie"], p["motdepasse"], joueur				
-			$parties[partie.id] = partie
+		when "nouvelle_partie"
+			if p["nom_partie"] && joueur.partie.nil?
+				partie = Partie.new $parties.size, p["nom_partie"], p["motdepasse"], joueur				
+				$parties[partie.id] = partie
+			end
 
+		# Si l'organisateur veut se reconnecter à sa partie
+		when "connexion_organisateur"
+			if joueur.partie
+				joueur.partie.informerOrganisateur
+			end
+		
+		# Si un joueur veut se connecter à une partie déjà organisée
+		when "connexion_adversaire"
+			if !joueur.partie
+			
+				partie = $parties[p["id_partie"].to_i]
+				
+				# Vérification du mot de passe si il y en a un
+				if partie.mdp && partie.mdp != ""
+					LOG.debug "Protection par mot de passe: #{partie.mdp} vs #{p["motdepasse"]}"	
+					if partie.mdp == p["motdepasse"]
+						partie.nouveauJoueur joueur
+					else
+						message =  {
+							"connexion_partie" => false
+						}
+
+						joueur.pile = [ message ]
+						
+					end
+				else
+					partie.nouveauJoueur joueur
+				end
+
+			end
+
+		# Pour quand l'organisateur est en attente
+		when "attente_adversaire"
+			if !joueur.partie
+				return
+			end
+
+		# Quand l'organisateur refuse ou accepte un adversaire
+		when "confirmation_adversaire"
+			if joueur.partie && joueur.partie.joueur_b_temp
+				if p["decision"]
+					joueur.partie.confirmerJoueur
+				else
+					puts "C'est con"
+				end
+			end
+		else
+			LOG.warn "L'action demandée n'a pas été trouvée"
 		end
 		
 		ecrire JSON.pretty_generate(joueur.getPile), response
 
-		#$joueurs[id_joueur] = joueur
-#		ecrire p.to_json, response
 	end
 
 	def ecrire(texte, rq)
 		rq.start(200) do |head,out|
+			head["Content-Type"] = "text/plain"
 			out.write texte
 		end
 	end
 
 end
-joueurs = []
 
-
-puts "Le serveur est lancé"
-h = Mongrel::HttpServer.new("0.0.0.0", "3000")
-h.register("/", ListeParties.new)
-h.run.join
