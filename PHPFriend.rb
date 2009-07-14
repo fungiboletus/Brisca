@@ -31,7 +31,7 @@ class PHPFriend
 		begin
 
 			Timeout::timeout(@timeout) do
-				http = Net::HTTP.new (uri.host, uri.port)
+				http = Net::HTTP.new(uri.host, uri.port)
 
 				code, data = http.get2(uri.path, {
 					"User-Agent"	=> @user_agent,
