@@ -25,30 +25,31 @@ class ListeParties < Mongrel::HttpHandler
 		end
 
 		LOG.debug p
-		sleep 1	
 	
 		# Liste des parties demandées
-		if !p["id_joueur"] || p["id_joueur"].to_i == 43 || !p['action']
+		if !p["session"] || !p['action']
 
 			obj = []
 
 			$parties.each do |id, partie|
-				json = {
-					"id" => id,
-					"nom"=> partie.nom,
-					"organisateur"=> partie.organisateur.nom,
-					"id_organisateur"=>partie.organisateur.id,
-					"niveau"=>partie.organisateur.niveau,
-					"element"=>partie.organisateur.element
-				}
+				if partie.danslaliste	
+					json = {
+						"id" => id,
+						"nom"=> partie.nom,
+						"organisateur"=> partie.organisateur.nom,
+						"id_organisateur"=>partie.organisateur.id,
+						"niveau"=>partie.organisateur.niveau,
+						"element"=>partie.organisateur.element
+					}
 
-				if partie.mdp.nil?
-					json["mdp"] = false 
-				else
-					json["mdp"] = true
+					if partie.mdp.nil? || partie.mdp == ''
+						json["mdp"] = false 
+					else
+						json["mdp"] = true
+					end
+
+					obj.push json
 				end
-
-				obj.push json
 			end
 		
 			ecrire JSON.pretty_generate(obj), response
@@ -56,13 +57,15 @@ class ListeParties < Mongrel::HttpHandler
 		end
 
 		# Récupération de l'id de joueur
-		id_joueur = p["id_joueur"].to_i
-		joueur = $joueurs[id_joueur]
+		session = p["session"]
+		joueur = $joueurs[session]
 
 		if joueur.nil?
-			joueur = Joueur.new id_joueur
-			$joueurs[id_joueur] = joueur
+			joueur = Joueur.new session
+			$joueurs[session] = joueur
 		end
+
+		return if joueur.invalide
 
 		# En fonction de ce qu'il faut faire
 		case p["action"]
@@ -85,24 +88,35 @@ class ListeParties < Mongrel::HttpHandler
 			if !joueur.partie
 			
 				partie = $parties[p["id_partie"].to_i]
-				
-				# Vérification du mot de passe si il y en a un
-				if partie.mdp && partie.mdp != ""
-					LOG.debug "Protection par mot de passe: #{partie.mdp} vs #{p["motdepasse"]}"	
-					if partie.mdp == p["motdepasse"]
-						partie.nouveauJoueur joueur
-					else
-						message =  {
-							"connexion_partie" => false
-						}
 
-						joueur.pile = [ message ]
-						
+				if !partie.refus.include? joueur.id
+					# Vérification du mot de passe si il y en a un
+					if partie.mdp && partie.mdp != ""
+						LOG.debug "Protection par mot de passe: #{partie.mdp} vs #{p["motdepasse"]}"	
+						if !(partie.mdp == p["motdepasse"] && (partie.nouveauJoueur joueur))
+							message =  {
+								"connexion_partie" => false
+							}
+
+							joueur.pile = [ message ]
+							
+						end
+					else
+						if !(partie.nouveauJoueur joueur)
+							message =  {
+								"connexion_partie" => false
+							}
+
+							joueur.pile = [ message ]
+						end
 					end
 				else
-					partie.nouveauJoueur joueur
-				end
+							message =  {
+								"connexion_partie" => false
+							}
 
+							joueur.pile = [ message ]
+				end
 			end
 
 		# Pour quand l'organisateur est en attente
@@ -110,6 +124,14 @@ class ListeParties < Mongrel::HttpHandler
 			if !joueur.partie
 				return
 			end
+			joueur.nadalol
+
+		when "attente_organisateur"
+			# Rien à faire
+			joueur.nadalol
+	
+		when "attente_action_adversaire"
+			joueur.nadalol
 
 		# Quand l'organisateur refuse ou accepte un adversaire
 		when "confirmation_adversaire"
@@ -117,9 +139,35 @@ class ListeParties < Mongrel::HttpHandler
 				if p["decision"]
 					joueur.partie.confirmerJoueur
 				else
-					puts "C'est con"
+					
+					partie = joueur.partie
+
+					joueur_b = partie.joueur_b_temp
+
+					pile = joueur_b.pile.clone
+
+					partie.annulerjoueur
+
+					joueur_b.pile = pile
+
+					message = {
+						"decision_organisateur" => false
+					}
+
+					joueur_b.pile.push message
 				end
 			end
+
+		when "changement_carte"
+			if joueur.partie && p["id_nouvelle_carte"]
+				joueur.partie.changerCarte(joueur, p["id_nouvelle_carte"])
+			end
+		
+		when "attaquer"
+			if joueur.partie
+				joueur.partie.attaquer joueur
+			end
+		
 		else
 			LOG.warn "L'action demandée n'a pas été trouvée"
 		end
