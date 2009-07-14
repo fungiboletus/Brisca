@@ -11,7 +11,7 @@ require 'Partie.rb'
 require 'Joueur.rb'
 
 $parties = {}
-$joueurs = []
+$joueurs = {}
 
 class ListeParties < Mongrel::HttpHandler
 	

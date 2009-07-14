@@ -12,7 +12,6 @@ class Joueur
 	@id = 0
 	@session = 28
 	@invalide = false
-	@ami_php = nil
 
 	@partie = nil
 	@pile = []
@@ -22,10 +21,12 @@ class Joueur
 
 	def initialize(session)
 
+		@session = session
+
 		LOG.info "Récupération des informations du joueur de la session #{session}"
 
-		AMI_PHP = new PHPFriend if !AMI_PHP
-		connexion = AMI_PHP.connecte session
+		$ami_php = PHPFriend.new if !$ami_php
+		connexion = $ami_php.connecte session
 
 		if !connexion
 			@invalide = true
@@ -34,10 +35,10 @@ class Joueur
 
 		@invalide = false
 		
-		@id = connexion.id 
-		@nom = connexion.nom
-		@niveau = connexion.niveau
-		@element = connexion.element
+		@id = connexion["id"] 
+		@nom = connexion["nom"]
+		@niveau = connexion["niveau"]
+		@element = connexion["element"]
 
 		@pile = []
 
@@ -47,7 +48,22 @@ class Joueur
 	end
 
 	def chargerCartes
-		@cartes = AMI_PHP.getCartes self
+		
+		@cartes = []
+		
+		cartes = $ami_php.getCartes self
+
+		cartes.each do |carte|
+			obj_carte = Carte.new carte["id"]
+			obj_carte.nom	= carte["nom"]
+			obj_carte.pv	= carte["pv"]
+			obj_carte.force	= carte["force"]
+			obj_carte.precision	= carte["precision"]
+			obj_carte.esquive	= carte["esquive"]
+			obj_carte.element	= carte["element"]
+
+			@cartes.push obj_carte
+		end
 
 		#@tirages = []
 
@@ -59,6 +75,8 @@ class Joueur
 				#@tirages.push tirage
 			#end
 		#end
+
+		#puts JSON.pretty_generate getCartes
 		
 	end
 

@@ -14,6 +14,7 @@ class Carte
 
 	def initialize(id)
 		@id = id
+		@pv = 0
 	end
 
 	def getJson
@@ -32,7 +33,7 @@ class Carte
 	end
 
 	def estMorte
-		return true if @pv <= 0
+		return true if (@pv <= 0)
 		return false
 	end
 
