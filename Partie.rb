@@ -53,6 +53,7 @@ class	Partie
 		organisateur.chargerCartes
 
 		informerOrganisateur
+
 	end
 
 	def informerOrganisateur
@@ -142,6 +143,12 @@ class	Partie
 		}
 
 		@pile_b.push cartes
+
+		j_a = @organisateur.getJson
+		j_b = @joueur_b.getJson
+
+		@pile_a.push({"nous" => j_a, "adversaire" => j_b})
+		@pile_b.push({"nous" => j_b, "adversaire" => j_a})
 	end
 
 	def annulerjoueur
@@ -174,22 +181,22 @@ class	Partie
 
 		return false if !joueurs
 
-		carte = joueur[0].getCarteById id_carte
+		carte = joueurs[0].getCarteById id_carte
 
 		return false if !carte
 
 		# On ne veut pas que l'on puisse changer avec la même carte que précédement…
-		return false if carte == joueur[0].carte_slot
+		return false if carte == joueurs[0].carte_slot
 
-		LOG.debug "Chargement de la carte #{carte.id}"
+		LOG.info "Chargement de la carte #{carte.id}"
 
-		joueur[0].carte_slot = carte
+		joueurs[0].carte_slot = carte
 
 		message = {
 			"changement_carte" => carte.getJson
 		}
 		
-		joueur[1].pile.push message
+		joueurs[1].pile.push message
 
 		# À la fin, pour éviter de tricher, quand même
 		changerTour
@@ -199,25 +206,30 @@ class	Partie
 
 		joueurs = verifierTour(joueur)
 
-		return false if !joueurs
-
 		return if !joueurs[0].carte_slot || !joueurs[1].carte_slot
+
+		return if joueurs[0].carte_slot.estMorte
 
 		historique = joueurs[0].carte_slot.combattre joueurs[1].carte_slot
 
+		verifier_fin_partie
+
 		message = joueurs[0].carte_slot.getJson
 		message["attaquant"] = true
+		message = {"infos_carte" => message}
 
-		@organisateur.push	message
-		@joueur_b.push		message
+		@organisateur.pile.push	message
+		@joueur_b.pile.push		message
 
 		message = joueurs[1].carte_slot.getJson
 		message["attaquant"] = false
+		message = {"infos_carte" => message}
 
-		@organisateur.push	message
-		@joueur_b.push		message
-
-		verifier_fin_partie
+		@organisateur.pile.push	message
+		@joueur_b.pile.push		message
+		
+		@organisateur.pile.push({"historique" => historique})
+		@joueur_b.pile.push({"historique" => historique})
 
 		changerTour
 		
@@ -226,6 +238,9 @@ class	Partie
 	def verifier_fin_partie
 		s_orga	= verifier_organisateur
 		s_b		= verifier_joueur_b
+
+		#s_orga = true
+		#s_b = true
 
 		# Si il y a égalité
 		if s_orga && s_b
@@ -255,6 +270,14 @@ class	Partie
 		# Si il y en a un des deux qui gagne, c'est la fin de la partie
 		if s_orga || s_b
 			finPartie
+			
+			# Notifications des fins de parties
+			if s_orga
+				$ami_php.finPartie(@organisateur, @joueur_b)
+			else
+				$ami_php.finPartie(@joueur_b, @organisateur)
+			end
+				
 		end
 
 	end

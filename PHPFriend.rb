@@ -21,6 +21,7 @@ class PHPFriend
 		@nom_param_session = ""
 		@url_connexion	= "http://localhost/lol2/"
 		@url_cartes		= "http://localhost/lol2/"
+		@url_fin_partie	= "http://localhost/lol2/"
 	end
 
 	def load_url(url)
@@ -63,8 +64,6 @@ class PHPFriend
 	def connecte(session)
 		code = load_url(@url_connexion + @nom_param_session+session+'.txt')
 
-		return false if !code
-
 		json = JSON.parse code
 		LOG.debug json
 
@@ -80,7 +79,8 @@ class PHPFriend
 		return json
 	end
 
-	def finPartie(gagne)
-		load_url(@url_fin_partie + @nom_param_session+gagnant.session+'&gagne='+gagne)
+	def finPartie(gagnant, perdant)
+		load_url(@url_fin_partie + @nom_param_session+gagnant.session+'?gagne=true')
+		load_url(@url_fin_partie + @nom_param_session+perdant.session+'?gagne=false')
 	end
 end

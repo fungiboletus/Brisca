@@ -1,7 +1,8 @@
 require 'logger'
 require "Serveur.rb"
 
-LOG = Logger.new STDOUT
+LOG = Logger.new STDERR
+# STDOUT
 
 LOG.info "Le serveurs est lancé"
 

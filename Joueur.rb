@@ -28,7 +28,7 @@ class Joueur
 		$ami_php = PHPFriend.new if !$ami_php
 		connexion = $ami_php.connecte session
 
-		if !connexion
+		if connexion["ok"] != nil && !connexion["ok"]
 			@invalide = true
 			return
 		end
@@ -45,6 +45,17 @@ class Joueur
 		#liste_elements = ["eau", "eclair", "feu", "feuille", "metal", "neige", "pierre", "vent"]
 
 	 	#@element = liste_elements.at rand liste_elements.length
+	end
+
+	def	getJson
+		json = {
+			"id"		=> @id,
+			"nom"		=> @nom,
+			"niveau"	=> @niveau,
+			"element"	=> @element
+		}
+
+		return json
 	end
 
 	def chargerCartes

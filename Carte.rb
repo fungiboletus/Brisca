@@ -39,18 +39,29 @@ class Carte
 
 	# C'est là que c'est amusant, on va combatter une autre carte, et c'est super bien	
 	def combattre (copine)
-	
-		#@precision_combat = @precision
-		@esquive_combat = @esquive_combat
-		#copine.precision_combat = copine.precision
-		copine.precision_combat = copine.precision
+		LOG.info "Combat entre les cartes: #{@nom} et #{copine.nom}"
+
+		@force = @force.to_i
+		@pv = @pv.to_i
+		@precision = @precision.to_i
+		@esquive = @esquive.to_i
+
+		copine.force = copine.force.to_i
+		copine.pv = copine.pv.to_i
+		copine.precision = copine.precision.to_i
+		copine.esquive = copine.esquive.to_i
+		
+		@esquive_combat = @esquive
+		copine.esquive_combat = copine.esquive
 
 		# On va raconter le combat à la fin, car c'est amusant
 		historique = []
 
 		# Mise en place du coup fatal, c'est rigolo et amusant
-		if 0==rand(100)	# Une chance sur 100
+		if 0==rand(42)	# Une chance sur 42
 			historique.push({"coup_fatal"	=> true})
+			copine.pv = 0
+			@pv = @pv -1
 			return historique
 		end
 
@@ -87,7 +98,7 @@ class Carte
 
 			chance = attaquee.esquive_combat - attaquant.precision
 
-			if chance < rand(100)
+			if chance <= rand(42)
 				pv_attaque	= (attaquant.force*rand).to_i
 
 				attaquee.pv -= pv_attaque
@@ -100,10 +111,11 @@ class Carte
 			historique.push message
 
 			# À chaque étape, l'esquive baisse
-			#@precision_combat = @precision_combat * 2 / 3
-			@esquive_combat = @esquive_combat * 2 / 3
-			#copine.precision_combat = copine.precision_combat * 2 / 3
-			copine.esquive_combat = copine.esquive_combat * 2 / 3
+			attaquee.esquive_combat = attaquee.esquive_combat * 2 / 3
+
+			# Partir en boucle infine, ce n'est pas une bonne chose
+			attaquant.pv -= 1
+			attaquee.pv -= 1
 
 		end
 
@@ -112,5 +124,34 @@ class Carte
 
 		return historique
 		
+	end
+
+	def attaquer(copine)
+		historique = []	
+
+		if !(estMorte || copine.estMorte)
+			message = {}
+
+			chance = attaquee.esquive - attaquant.precision
+
+			if chance <= rand(42)
+				pv_attaque	= (attaquant.force*rand).to_i
+
+				attaquee.pv -= pv_attaque
+
+				message["pv_attaque"] = pv_attaque
+			else
+				message["esquive"] = true
+			end
+		
+			historique.push message
+			
+		end
+
+		historique.push({"attaquee_est_morte" => true}) if copine.estMorte
+		historique.push({"attaquant_est_morte" => true}) if estMorte
+
+		return historique
+
 	end
 end
