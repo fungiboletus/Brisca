@@ -8,20 +8,20 @@ class PHPFriend
 	
 	def initialize
 
-		@user_agent = "Salutlesamis"
-		@referer	= "http://lol.fr/"
-		@timeout	= 5
+		@user_agent = "PoneyServeur"
+		@referer	= "http://perdu.com/"
+		@timeout	= 2
 		
-		@url_connexion	= "http://salut.lol/connexion.php"
-		@url_cartes		= "http://lol.fr/cartes.php"
-		@url_fin_partie	= "http://salut.com/fin_partie.php"
+		@url_connexion	= "http://www.elementz.fr/jeu/connecte.php"
+		@url_cartes		= "http://www.elementz.fr/jeu/deck.php"
+		@url_fin_partie	= "http://www.elementz.fr/jeu/fin_partie.php"
 
 		@nom_param_session = "?PHPESSID="
 		
-		@nom_param_session = ""
-		@url_connexion	= "http://localhost/lol2/"
-		@url_cartes		= "http://localhost/lol2/"
-		@url_fin_partie	= "http://localhost/lol2/"
+#@nom_param_session = ""
+#@url_connexion	= "http://localhost/lol2/"
+#@url_cartes		= "http://localhost/lol2/"
+#@url_fin_partie	= "http://localhost/lol2/"
 	end
 
 	def load_url(url)
@@ -38,7 +38,10 @@ class PHPFriend
 			Timeout::timeout(@timeout) do
 				http = Net::HTTP.new(uri.host, uri.port)
 
-				code, data = http.get(uri.path, {
+				salut = uri.path
+				salut = "#{salut}?#{uri.query}" if uri.query				
+
+				code, data = http.get(salut, {
 					"User-Agent"	=> @user_agent,
 					"Referer"		=> @referer
 				})
@@ -62,7 +65,7 @@ class PHPFriend
 	end
 
 	def connecte(session)
-		code = load_url(@url_connexion + @nom_param_session+session+'.txt')
+		code = load_url(@url_connexion + @nom_param_session+session)
 
 		json = JSON.parse code
 		LOG.debug json
@@ -80,7 +83,7 @@ class PHPFriend
 	end
 
 	def finPartie(gagnant, perdant)
-		load_url(@url_fin_partie + @nom_param_session+gagnant.session+'?gagne=true')
-		load_url(@url_fin_partie + @nom_param_session+perdant.session+'?gagne=false')
+#load_url(@url_fin_partie + @nom_param_session+gagnant.session+'?gagne=true')
+#load_url(@url_fin_partie + @nom_param_session+perdant.session+'?gagne=false')
 	end
 end
