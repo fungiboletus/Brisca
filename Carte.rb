@@ -127,31 +127,31 @@ class Carte
 	end
 
 	def attaquer(copine)
-		historique = []	
+		message = {}
 
 		if !(estMorte || copine.estMorte)
-			message = {}
 
-			chance = attaquee.esquive - attaquant.precision
+			chance = copine.esquive - @precision
 
 			if chance <= rand(42)
-				pv_attaque	= (attaquant.force*rand).to_i
+				force = @force
 
-				attaquee.pv -= pv_attaque
+				copine.pv -= @force
 
-				message["pv_attaque"] = pv_attaque
+				if copine.pv < 0
+					force += copine.pv
+					
+					copine.pv = 0
+				end
+
+				message["pv_attaque"] = force
 			else
 				message["esquive"] = true
 			end
 		
-			historique.push message
-			
 		end
 
-		historique.push({"attaquee_est_morte" => true}) if copine.estMorte
-		historique.push({"attaquant_est_morte" => true}) if estMorte
-
-		return historique
+		return message
 
 	end
 end

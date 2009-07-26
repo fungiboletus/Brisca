@@ -210,26 +210,26 @@ class	Partie
 
 		return if joueurs[0].carte_slot.estMorte
 
-		historique = joueurs[0].carte_slot.combattre joueurs[1].carte_slot
+		historique = joueurs[0].carte_slot.attaquer joueurs[1].carte_slot
 
 		verifier_fin_partie
 
-		message = joueurs[0].carte_slot.getJson
-		message["attaquant"] = true
-		message = {"infos_carte" => message}
+		carte_attaquant = joueurs[0].carte_slot.getJson
+		carte_attaquant["attaquant"] = true
+		carte_attaquant = {"infos_carte" => carte_attaquant}
 
-		@organisateur.pile.push	message
-		@joueur_b.pile.push		message
+		@organisateur.pile.push	carte_attaquant
+		@joueur_b.pile.push		carte_attaquant
 
-		message = joueurs[1].carte_slot.getJson
-		message["attaquant"] = false
-		message = {"infos_carte" => message}
+		carte_attaque = joueurs[1].carte_slot.getJson
+		carte_attaque["attaquant"] = false
+		carte_attaque = {"infos_carte" => carte_attaque}
 
-		@organisateur.pile.push	message
-		@joueur_b.pile.push		message
+		@organisateur.pile.push	carte_attaque
+		@joueur_b.pile.push		carte_attaque
 		
-		@organisateur.pile.push({"historique" => historique})
-		@joueur_b.pile.push({"historique" => historique})
+		@organisateur.pile.push({"infos_attaque" => historique})
+		@joueur_b.pile.push({"infos_attaque" => historique})
 
 		changerTour
 		

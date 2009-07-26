@@ -16,7 +16,7 @@ class PHPFriend
 		@url_cartes		= "http://www.elementz.fr/jeu/deck.php"
 		@url_fin_partie	= "http://www.elementz.fr/jeu/fin_partie.php"
 
-		@nom_param_session = "?PHPESSID="
+		@nom_param_session = "?PHPSESSID="
 		
 #@nom_param_session = ""
 #@url_connexion	= "http://localhost/lol2/"
