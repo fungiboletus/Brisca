@@ -68,17 +68,22 @@ class Joueur
 		@cartes = []
 		
 		cartes = $ami_php.getCartes self
+		
+		i = 0	
 
 		cartes.each do |carte|
-			obj_carte = Carte.new carte["id"]
-			obj_carte.nom	= carte["nom"]
-			obj_carte.pv	= carte["pv"]
-			obj_carte.force	= carte["force"]
+			obj_carte			= Carte.new carte["id"]
+			obj_carte.id_carte	= i
+			obj_carte.nom		= carte["nom"]
+			obj_carte.pv		= carte["pv"]
+			obj_carte.force		= carte["force"]
 			obj_carte.precision	= carte["precision"]
 			obj_carte.esquive	= carte["esquive"]
 			obj_carte.element	= carte["element"]
 
 			@cartes.push obj_carte
+
+			++i
 		end
 
 		#@tirages = []
@@ -124,7 +129,7 @@ class Joueur
 
 	def getCarteById(id_carte)
 		@cartes.each do |carte|
-			if carte.id == id_carte
+			if carte.id_partie == id_carte
 				return carte
 			end
 		end
@@ -133,7 +138,6 @@ class Joueur
 	end
 	
 	def nadalol
-#@pile.push({"nada" => true})
 	end
 
 	def annoncerVictoire
@@ -146,5 +150,9 @@ class Joueur
 
 	def enVie
 		@temps_reponse = Time.now
+	end
+
+	def getStatusPartie
+
 	end
 end

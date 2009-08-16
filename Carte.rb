@@ -1,5 +1,6 @@
 class Carte
 	@id = 0
+	@id_partie = 0
 	@nom = ""
 	@force = 0
 	@pv = 0
@@ -20,6 +21,7 @@ class Carte
 	def getJson
 		json = {
 			"id"		=> @id,
+			"id_partie"	=> $id_partie,
 			"nom"		=> @nom,
 			"force"		=> @force,
 			"pv"		=> @pv,

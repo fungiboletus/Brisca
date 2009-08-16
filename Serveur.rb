@@ -5,8 +5,6 @@ require "jcode"
 require "cgi"
 require 'base64'
 
-$KCODE = 'u'
-
 require 'Partie.rb'
 require 'Joueur.rb'
 
@@ -27,8 +25,7 @@ class ListeParties < Mongrel::HttpHandler
 		LOG.debug p
 	
 		# Liste des parties demandées
-		if !p["session"] || !p['action']
-
+		if !p["session"] || !p['action'] || p['action'] == 'liste_parties'
 			obj = []
 
 			$parties.each do |id, partie|
@@ -81,10 +78,10 @@ class ListeParties < Mongrel::HttpHandler
 			end
 
 		# Si l'organisateur veut se reconnecter à sa partie
-		when "connexion_organisateur"
-			if joueur.partie
-				joueur.partie.informerOrganisateur
-			end
+		# when "connexion_organisateur"
+		#		if joueur.partie
+		#		joueur.partie.informerOrganisateur
+		# end
 		
 		# Si un joueur veut se connecter à une partie déjà organisée
 		when "connexion_adversaire"
@@ -175,6 +172,9 @@ class ListeParties < Mongrel::HttpHandler
 			LOG.warn "L'action demandée n'a pas été trouvée"
 		end
 		
+		# Savoir où l'on en est dans la partie
+		joueur.getStatusPartie
+	
 		ecrire JSON.pretty_generate(joueur.getPile), response
 
 	end

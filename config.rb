@@ -1,0 +1,4 @@
+PORT_SERVEUR = 3000
+
+$KCODE = 'u'
+
