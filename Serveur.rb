@@ -67,6 +67,9 @@ class ListeParties < Mongrel::HttpHandler
 
 		return if joueur.invalide
 
+		# Le joueur est toujours en vie
+		joueur.enVie
+
 		# En fonction de ce qu'il faut faire
 		case p["action"]
 		
@@ -95,7 +98,7 @@ class ListeParties < Mongrel::HttpHandler
 						LOG.debug "Protection par mot de passe: #{partie.mdp} vs #{p["motdepasse"]}"	
 						if !(partie.mdp == p["motdepasse"] && (partie.nouveauJoueur joueur))
 							message =  {
-								"connexion_partie" => false
+								"connexion_partie" => "mdp_faux"
 							}
 
 							joueur.pile = [ message ]
@@ -104,7 +107,7 @@ class ListeParties < Mongrel::HttpHandler
 					else
 						if !(partie.nouveauJoueur joueur)
 							message =  {
-								"connexion_partie" => false
+								"connexion_partie" => "place_prise"
 							}
 
 							joueur.pile = [ message ]
@@ -112,7 +115,7 @@ class ListeParties < Mongrel::HttpHandler
 					end
 				else
 							message =  {
-								"connexion_partie" => false
+								"connexion_partie" => "refus_partie"
 							}
 
 							joueur.pile = [ message ]

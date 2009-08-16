@@ -27,7 +27,7 @@ class PHPFriend
 	def load_url(url)
 		LOG.info "Chargement de l'url: #{url}"
 
-		# Parsage de l'url
+		# Parsage de l'ul
 		uri = URI.parse(url)
 
 		code = nil

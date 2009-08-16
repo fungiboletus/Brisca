@@ -2,34 +2,44 @@ require 'Joueur.rb'
 
 class	Partie 
 
+	# L'organisateur de la partie
 	@organisateur = nil
 
+	# L'adversaire, le joueur temporaire sert à la connexion
 	@joueur_b = nil
 	@joueur_b_temp = nil
-	
-	@pile_a = []
-	@pile_b = []
 
+	# Nom de la partie, et mot de passe si besoin
 	@nom = ""
 	@mdp = ""
 
+	# La liste des adversaires refusés, pour pas qu'ils puissent refaire une demande
 	@refus = []
 
+	# Pour savoir si la partie est terminée
 	@termine = false
 
+	# Date de début de la partie
 	@date_debut = 0
+	
+	# Nombre de tours, pour se tenir au courant de l'avancement quand même
+	@nombre_tours = 0
 
+	# Identifiant de la partie
 	@id = 0
 
+	# Tour de joueur
 	@tour_joueur = nil
 
-	attr_reader :id, :nom, :mdp, :organisateur, :joueur_b, :joueur_b_temp, :refus
+	attr_reader :id, :nom, :mdp, :organisateur, :joueur_b, :joueur_b_temp, :refus, :nombre_tours
 
 	def initialize(id, nom, mot_de_passe, organisateur)
 		
 		LOG.info "Création de la partie #{id}"	
 
 		@id = id
+	
+		@nombre_tours = 0
 			
 		@organisateur = organisateur
 
@@ -39,16 +49,13 @@ class	Partie
 
 		organisateur.partie = self
 		
-		@pile_a = []
-		@pile_b = []
-
 		@refus = [] 
 	
 		@termine = false
 
-		@date_debut = 0
-
-		organisateur.pile = @pile_a
+		@date_debut = Time.now
+		@date_adversaire = Time.now
+		@date_joueur_b = 0
 
 		organisateur.chargerCartes
 
@@ -70,11 +77,12 @@ class	Partie
 			infos["adversaire"] = true
 		end
 
-		@pile_a.push infos 
+		@organisateur.pile.push infos 
 	end
 
 	def nouveauJoueur(joueur)
 		return false if (!@joueur_b.nil? || !@joueur_b_temp.nil?)
+
 		@joueur_b_temp = joueur
 		joueur.partie = self
 		
@@ -87,15 +95,13 @@ class	Partie
 			}
 		}
 		
-		@pile_a.push  commande
+		@organisateur.pile.push  commande
 
-		@pile_b = [
+		@joueur_b_temp.pile = [
 			{
-				"connexion_partie" => true
+				"connexion_partie" => "reussie"
 			}
 		]
-
-		joueur.pile = @pile_b
 
 		return true
 	end
@@ -128,12 +134,12 @@ class	Partie
 		# qui commence ?
 		if (@tour_joueur == 0)
 			# L'organisateur commence
-			@pile_a.push commence_t
-			@pile_b.push commence_f
+			@organisateur.pile.push commence_t
+			@joueur_b.pile.push commence_f
 		else
 			# L'adversaire commence
-			@pile_a.push commence_f
-			@pile_b.push commence_t
+			@organisateur.pile.push commence_f
+			@joueur_b.pile.push commence_t
 		end
 
 		@joueur_b.chargerCartes	
@@ -142,13 +148,13 @@ class	Partie
 			"mes_cartes" => @joueur_b.getCartes
 		}
 
-		@pile_b.push cartes
+		@joueur_b.pile.push cartes
 
 		j_a = @organisateur.getJson
 		j_b = @joueur_b.getJson
 
-		@pile_a.push({"nous" => j_a, "adversaire" => j_b})
-		@pile_b.push({"nous" => j_b, "adversaire" => j_a})
+		@organisateur.pile.push({"nous" => j_a, "adversaire" => j_b})
+		@joueur_b.pile.push({"nous" => j_b, "adversaire" => j_a})
 	end
 
 	def annulerjoueur
@@ -159,7 +165,7 @@ class	Partie
 		
 		@joueur_b = nil
 		
-		@pile_b.clear
+		@joueur_b.pile.clear
 	end
 
 	def danslaliste
@@ -167,13 +173,19 @@ class	Partie
 
 		return false if @joueur_b 
 
-		# Partie trop vielle if @date < ahah
-
+		# Partie trop vielle si elle date de plus de 30 secondes (c'est rapide, mais c'est fait exprès)
+		if @date_adversaire + 3600 < Time.now
+			
+			finPartie
+			return false
+		
+		end
 		return true
 	end
 
 	def changerTour
 		@tour_joueur = (@tour_joueur + 1) % 2
+		@nombre_tour += 1
 	end
 
 	def changerCarte(joueur, id_carte)
@@ -185,6 +197,14 @@ class	Partie
 
 		return false if !carte
 
+		# Si le joueur n'a pas de carte ou que sa carte est morte,
+		# cela ne lui fait pas changer de tour
+		changement_tour = true
+
+		if !joueurs[0].carte_slot || joueurs[0].carte_slot.estMorte
+			changement_tour = false
+		end
+
 		# On ne veut pas que l'on puisse changer avec la même carte que précédement…
 		return false if carte == joueurs[0].carte_slot
 
@@ -192,14 +212,21 @@ class	Partie
 
 		joueurs[0].carte_slot = carte
 
+		json_carte = carte.getJson
+		json_carte["changement_tour"] = changement_tour
+
 		message = {
-			"changement_carte" => carte.getJson
+			"changement_carte" => json_carte
 		}
 		
-		joueurs[1].pile.push message
+		if @nombre_tours != 0
+			joueurs[1].pile.push message
+		else
+			joueurs[1].message_debut_partie = message
+		end
 
-		# À la fin, pour éviter de tricher, quand même
-		changerTour
+		# Il ne faut pas oublier de changer de tour
+		changerTour if changement_tour
 	end
 
 	def attaquer(joueur)
@@ -238,9 +265,6 @@ class	Partie
 	def verifier_fin_partie
 		s_orga	= verifier_organisateur
 		s_b		= verifier_joueur_b
-
-		#s_orga = true
-		#s_b = true
 
 		# Si il y a égalité
 		if s_orga && s_b
@@ -312,6 +336,14 @@ class	Partie
 		@joueur_b.partie = nil
 
 		@termine = true
+	end
+
+	def abandonner(joueur)
+		
+	end
+
+	def verifierTempsReponse
+		
 	end
 
 end

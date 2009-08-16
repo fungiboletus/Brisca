@@ -14,9 +14,13 @@ class Joueur
 	@invalide = false
 
 	@partie = nil
-	@pile = []
 
-	attr_accessor :pile, :partie, :carte_slot
+	@pile = []
+	@message_debut_partie = nil
+
+	@temps_reponse
+
+	attr_accessor :pile, :partie, :carte_slot, :message_debut_partie, :temps_reponse
 	attr_reader :cartes, :nom, :element, :id, :session, :niveau, :invalide
 
 	def initialize(session)
@@ -41,6 +45,7 @@ class Joueur
 		@element = connexion["element"]
 
 		@pile = []
+		@message_debut_partie = false
 
 		#liste_elements = ["eau", "eclair", "feu", "feuille", "metal", "neige", "pierre", "vent"]
 
@@ -94,6 +99,12 @@ class Joueur
 	def getPile
 		if @pile
 			pile = @pile.clone
+
+			if @message_debut_partie && @partie.nombre_tours != 0
+				pile.push @message_debut_partie
+				@message_debut_partie = false
+			end
+
 			@pile.clear
 			return pile
 		else
@@ -122,7 +133,7 @@ class Joueur
 	end
 	
 	def nadalol
-		@pile.push({"nada" => true})
+#@pile.push({"nada" => true})
 	end
 
 	def annoncerVictoire
@@ -131,5 +142,9 @@ class Joueur
 
 	def annoncerDefaite
 		@pile.push({"defaite" => true})
+	end
+
+	def enVie
+		@temps_reponse = Time.now
 	end
 end
