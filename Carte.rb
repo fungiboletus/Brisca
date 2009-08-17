@@ -7,15 +7,17 @@ class Carte
 	@precision = 0
 	@esquive = 0
 	@element = 0
+	@carte_vue = false
 
 	#@precision_combat
 	@esquive_combat
 
-	attr_accessor :id, :nom, :force, :pv, :precision, :esquive, :element, :esquive_combat
+	attr_accessor :id, :nom, :force, :pv, :precision, :esquive, :element, :esquive_combat, :carte_vue
 
 	def initialize(id)
 		@id = id
 		@pv = 0
+		@carte_vue = false
 	end
 
 	def getJson
