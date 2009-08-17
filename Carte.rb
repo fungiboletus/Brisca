@@ -9,10 +9,7 @@ class Carte
 	@element = 0
 	@carte_vue = false
 
-	#@precision_combat
-	@esquive_combat
-
-	attr_accessor :id, :nom, :force, :pv, :precision, :esquive, :element, :esquive_combat, :carte_vue
+	attr_accessor :id, :id_partie, :nom, :force, :pv, :precision, :esquive, :element, :carte_vue
 
 	def initialize(id)
 		@id = id
@@ -42,31 +39,21 @@ class Carte
 	end
 
 	def attaquer(copine)
-		message = {}
 
 		if !(estMorte || copine.estMorte)
 
 			chance = copine.esquive - @precision
 
+			# Si la carte n'esquive pas
 			if chance <= rand(42)
 				force = @force
 
 				copine.pv -= @force
 
-				if copine.pv < 0
-					force += copine.pv
-					
-					copine.pv = 0
-				end
-
-				message["pv_attaque"] = force
-			else
-				message["esquive"] = true
+				copine.pv = 0 if copine.pv < 0
 			end
 		
 		end
-
-		return message
 
 	end
 end

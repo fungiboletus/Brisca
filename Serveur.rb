@@ -29,7 +29,7 @@ class ListeParties < Mongrel::HttpHandler
 			obj = []
 
 			$parties.each do |id, partie|
-				if partie.danslaliste	
+				if partie.dansLaListe	
 					json = {
 						"id" => id,
 						"nom"=> partie.nom,
@@ -64,28 +64,25 @@ class ListeParties < Mongrel::HttpHandler
 
 		return if joueur.invalide
 
-		# Le joueur est toujours en vie
-		joueur.enVie
-
 		# En fonction de ce qu'il faut faire
 		case p["action"]
 		
 		# Si il faut créer une nouvelle partie
 		when "nouvelle_partie"
+			
+			# Si la partie n'existe pas
 			if p["nom_partie"] && joueur.partie.nil?
+			
+				# Création de la partie
 				partie = Partie.new $parties.size, p["nom_partie"], p["motdepasse"], joueur				
+				
+				# Ajout à la liste des parties
 				$parties[partie.id] = partie
 			end
 
-		# Si l'organisateur veut se reconnecter à sa partie
-		# when "connexion_organisateur"
-		#		if joueur.partie
-		#		joueur.partie.informerOrganisateur
-		# end
-		
 		# Si un joueur veut se connecter à une partie déjà organisée
 		when "connexion_adversaire"
-			if !joueur.partie
+			if !joueur.partie || joueur.partie.termine
 			
 				partie = $parties[p["id_partie"].to_i]
 
@@ -94,40 +91,31 @@ class ListeParties < Mongrel::HttpHandler
 					if partie.mdp && partie.mdp != ""
 						LOG.debug "Protection par mot de passe: #{partie.mdp} vs #{p["motdepasse"]}"	
 						if !(partie.mdp == p["motdepasse"] && (partie.nouveauJoueur joueur))
-							message =  {
+							joueur.message =  {
 								"connexion_partie" => "mdp_faux"
 							}
 
-							joueur.pile = [ message ]
-							
 						end
 					else
 						if !(partie.nouveauJoueur joueur)
-							message =  {
+							joueur.message =  {
 								"connexion_partie" => "place_prise"
 							}
-
-							joueur.pile = [ message ]
 						end
 					end
 				else
-							message =  {
+							joueur.message =  {
 								"connexion_partie" => "refus_partie"
 							}
-
-							joueur.pile = [ message ]
 				end
 			end
 
 		# Pour quand l'organisateur est en attente
 		when "attente_adversaire"
-			if !joueur.partie
-				return
-			end
-			joueur.nadalol
+			# Il faut faire comprendre que l'organisateur est toujours là
+			joueur.partie.date_adversaire = Time.now
 
 		when "attente_organisateur"
-			# Rien à faire
 			joueur.nadalol
 	
 		when "attente_action_adversaire"
@@ -138,44 +126,63 @@ class ListeParties < Mongrel::HttpHandler
 			if joueur.partie && joueur.partie.joueur_b_temp
 				if p["decision"]
 					joueur.partie.confirmerJoueur
+
+					# Il faut réveiller les joueurs
+					joueur.partie.organisateur.enVie
+					joueur.partie.joueur_b.enVie
+
+					joueur_b.message = {
+						"connexion_partie" => "ok"
+					}
+
 				else
 					
 					partie = joueur.partie
 
 					joueur_b = partie.joueur_b_temp
 
-					pile = joueur_b.pile.clone
+					partie.annulerJoueur
 
-					partie.annulerjoueur
-
-					joueur_b.pile = pile
-
-					message = {
-						"decision_organisateur" => false
+					joueur_b.message = {
+						"connexion_partie" => "refus_partie"
 					}
 
-					joueur_b.pile.push message
 				end
 			end
 
 		when "changement_carte"
 			if joueur.partie && p["id_nouvelle_carte"]
-				joueur.partie.changerCarte(joueur, p["id_nouvelle_carte"])
+				joueur.changerCarte p["id_nouvelle_carte"]
 			end
 		
 		when "attaquer"
 			if joueur.partie
-				joueur.partie.attaquer joueur
+				joueur.attaquer
 			end
-		
+
+		when "abandonner"
+			if joueur.partie
+				joueur.abandonner
+			end
+
+		when "fin_partie"
+			# Il faut libérer le joueur de la partie
+			joueur.partie = nil
+
 		else
 			LOG.warn "L'action demandée n'a pas été trouvée"
 		end
 		
-		# Savoir où l'on en est dans la partie
-		joueur.getStatusPartie
+		# Envoi des informations à propos de la partie
+		informations = joueur.informationsPartie
+
+		# Si il y a un message à faire passer, qu'il passe
+		if joueur.message
+			informations["message"] = joueur.message
+			joueur.message = false
+		end
 	
-		ecrire JSON.pretty_generate(joueur.getPile), response
+		ecrire JSON.pretty_generate(informations), response
 
 	end
 

@@ -15,13 +15,11 @@ class Joueur
 
 	@partie = nil
 
-	@pile = []
-	@message_debut_partie = nil
+	@temps_reponse = nil
+	@message = false
 
-	@temps_reponse
-
-	attr_accessor :pile, :partie, :carte_slot, :message_debut_partie, :temps_reponse
-	attr_reader :cartes, :nom, :element, :id, :session, :niveau, :invalide
+	attr_accessor :partie, :carte_slot, :message
+	attr_reader :cartes, :nom, :element, :id, :session, :niveau, :invalide, :temps_reponse
 
 	def initialize(session)
 
@@ -44,12 +42,8 @@ class Joueur
 		@niveau = connexion["niveau"]
 		@element = connexion["element"]
 
-		@pile = []
-		@message_debut_partie = false
+		@message = false
 
-		#liste_elements = ["eau", "eclair", "feu", "feuille", "metal", "neige", "pierre", "vent"]
-
-	 	#@element = liste_elements.at rand liste_elements.length
 	end
 
 	def	getJson
@@ -86,35 +80,6 @@ class Joueur
 			++i
 		end
 
-		#@tirages = []
-
-		#while @cartes.length != 8 do
-			#tirage = (rand 128)+1
-
-			#if !@tirages.include? tirage
-				#@cartes.push(Carte.new(tirage))
-				#@tirages.push tirage
-			#end
-		#end
-
-		#puts JSON.pretty_generate getCartes
-		
-	end
-
-	def getPile
-		if @pile
-			pile = @pile.clone
-
-			if @message_debut_partie && @partie.nombre_tours != 0
-				pile.push @message_debut_partie
-				@message_debut_partie = false
-			end
-
-			@pile.clear
-			return pile
-		else
-			return []
-		end
 	end
 
 	def getCartes
@@ -140,19 +105,19 @@ class Joueur
 	def nadalol
 	end
 
-	def annoncerVictoire
-		@pile.push({"victoire" => true})
-	end
-
-	def annoncerDefaite
-		@pile.push({"defaite" => true})
-	end
-
 	def enVie
 		@temps_reponse = Time.now
 	end
 
-	def getStatusPartie
+	def attaquer
+		@partie.attaquer self
+	end
 
+	def changerCarte(id_carte)
+		@partie.changerCarte(self,id_carte)
+	end
+
+	def informationsPartie
+		@partie.informationsPartie self
 	end
 end

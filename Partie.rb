@@ -32,6 +32,7 @@ class	Partie
 	@tour_joueur = nil
 
 	attr_reader :id, :nom, :mdp, :organisateur, :joueur_b, :joueur_b_temp, :refus, :nombre_tours
+	attr_accessor :date_adversaire
 
 	def initialize(id, nom, mot_de_passe, organisateur)
 		
@@ -53,31 +54,15 @@ class	Partie
 	
 		@termine = false
 
+		# Savoir quand la partie a commencée
 		@date_debut = Time.now
+
+		# Dernier passage de l'adversaire sur la partie
 		@date_adversaire = Time.now
-		@date_joueur_b = 0
-
-		organisateur.chargerCartes
-
-		informerOrganisateur
-
-	end
-
-	def informerOrganisateur
 		
-		infos = {
-				"type"		=> "organisation_partie",
-				"mes_cartes"	=> organisateur.getCartes,
-				"id_partie"	=> id,
-				"element"	=> organisateur.element,
-				"adversaire"	=> false
-		}
+		# C'est bien de charger les cartes de temps en temps
+		@organisateur.chargerCartes
 
-		if @joueur_b
-			infos["adversaire"] = true
-		end
-
-		@organisateur.pile.push infos 
 	end
 
 	def nouveauJoueur(joueur)
@@ -86,7 +71,7 @@ class	Partie
 		@joueur_b_temp = joueur
 		joueur.partie = self
 		
-		commande = {
+		@organisateur.message = {
 			"nouvel_adversaire" => {
 				"nom" => joueur.nom,
 				"id" => joueur.id,
@@ -95,69 +80,23 @@ class	Partie
 			}
 		}
 		
-		@organisateur.pile.push  commande
-
-		@joueur_b_temp.pile = [
-			{
-				"connexion_partie" => "reussie"
-			}
-		]
-
 		return true
 	end
 
 	def confirmerJoueur
+
+		# C'est bon, le joueur est le joueur principal :-)
 		@joueur_b = @joueur_b_temp
 
-		message = {
-			"element_partie"		=> @organisateur.element
-		}
-
-		@joueur_b.pile.push message
-		
-		message = {
-			"decision_organisateur" => true,
-		}
-
-		@joueur_b.pile.push message
-
-		commence_t = {
-			"on_commence" => true
-		}
-		
-		commence_f = {
-			"on_commence" => false 
-		}
-
+		# Choix de qui commence
 		@tour_joueur = rand 2
-		
-		# qui commence ?
-		if (@tour_joueur == 0)
-			# L'organisateur commence
-			@organisateur.pile.push commence_t
-			@joueur_b.pile.push commence_f
-		else
-			# L'adversaire commence
-			@organisateur.pile.push commence_f
-			@joueur_b.pile.push commence_t
-		end
 
+		# Chargement des cartes du joueur
 		@joueur_b.chargerCartes	
 
-		cartes = {
-			"mes_cartes" => @joueur_b.getCartes
-		}
-
-		@joueur_b.pile.push cartes
-
-		j_a = @organisateur.getJson
-		j_b = @joueur_b.getJson
-
-		@organisateur.pile.push({"nous" => j_a, "adversaire" => j_b})
-		@joueur_b.pile.push({"nous" => j_b, "adversaire" => j_a})
 	end
 
-	def annulerjoueur
+	def annulerJoueur
 		@refus.push @joueur_b_temp.id
 
 		@joueur_b_temp.partie = nil
@@ -165,21 +104,21 @@ class	Partie
 		
 		@joueur_b = nil
 		
-		@joueur_b.pile.clear
 	end
 
-	def danslaliste
+	def dansLaListe
 		return false if @termine 
 
 		return false if @joueur_b 
 
-		# Partie trop vielle si elle date de plus de 30 secondes (c'est rapide, mais c'est fait exprès)
-		if @date_adversaire + 3600 < Time.now
+		# Partie trop vielle si elle date de plus de 60 secondes (c'est rapide, mais c'est fait exprès)
+		if @date_adversaire + 60 < Time.now
 			
 			finPartie
 			return false
 		
 		end
+
 		return true
 	end
 
@@ -189,75 +128,51 @@ class	Partie
 	end
 
 	def changerCarte(joueur, id_carte)
+
 		joueurs = verifierTour(joueur)
 
-		return false if !joueurs
+		return false if !joueurs # Inutile de tenter de tricher
 
+		# Récupération de la carte qu'il faut changer
 		carte = joueurs[0].getCarteById id_carte
 
-		return false if !carte
-
-		# Si le joueur n'a pas de carte ou que sa carte est morte,
-		# cela ne lui fait pas changer de tour
-		changement_tour = true
-
-		if !joueurs[0].carte_slot || joueurs[0].carte_slot.estMorte
-			changement_tour = false
+		# Si la carte n'existe pas, c'est pas glop
+		if !carte
+			LOG.warn "Changement de carte avec une carte inconnue: #{id_carte}"
+			
+			return false 
 		end
 
 		# On ne veut pas que l'on puisse changer avec la même carte que précédement…
 		return false if carte == joueurs[0].carte_slot
 
-		LOG.info "Chargement de la carte #{carte.id}"
+		LOG.info "Chargement de la carte #{carte.id_carte}"
 
 		joueurs[0].carte_slot = carte
-
-		json_carte = carte.getJson
-		json_carte["changement_tour"] = changement_tour
-
-		message = {
-			"changement_carte" => json_carte
-		}
 		
-		if @nombre_tours != 0
-			joueurs[1].pile.push message
-		else
-			joueurs[1].message_debut_partie = message
+		# Si le joueur n'a pas de carte ou que sa carte est morte,
+		# cela ne lui fait pas changer de tour
+		if joueurs[0].carte_slot && !joueurs[0].carte_slot.estMorte
+			changerTour
 		end
 
-		# Il ne faut pas oublier de changer de tour
-		changerTour if changement_tour
 	end
 
 	def attaquer(joueur)
 
 		joueurs = verifierTour(joueur)
 
-		return if !joueurs[0].carte_slot || !joueurs[1].carte_slot
+		# Vérifications d'usage
+		return if !joueurs # Retour si la personne veut tricher
 
-		return if joueurs[0].carte_slot.estMorte
+		return if !joueurs[0].carte_slot || !joueurs[1].carte_slot # Retour si un joueur n'a pas de carte dans son slot (pour éviter les bugs)
 
-		historique = joueurs[0].carte_slot.attaquer joueurs[1].carte_slot
+		return if joueurs[0].carte_slot.estMorte # Retour si la carte du slot est morte
 
-		verifier_fin_partie
+		# Attaquons !
+		joueurs[0].carte_slot.attaquer joueurs[1].carte_slot
 
-		carte_attaquant = joueurs[0].carte_slot.getJson
-		carte_attaquant["attaquant"] = true
-		carte_attaquant = {"infos_carte" => carte_attaquant}
-
-		@organisateur.pile.push	carte_attaquant
-		@joueur_b.pile.push		carte_attaquant
-
-		carte_attaque = joueurs[1].carte_slot.getJson
-		carte_attaque["attaquant"] = false
-		carte_attaque = {"infos_carte" => carte_attaque}
-
-		@organisateur.pile.push	carte_attaque
-		@joueur_b.pile.push		carte_attaque
-		
-		@organisateur.pile.push({"infos_attaque" => historique})
-		@joueur_b.pile.push({"infos_attaque" => historique})
-
+		# Là, on change de tour à tout les coups
 		changerTour
 		
 	end
@@ -306,23 +221,8 @@ class	Partie
 
 	end
 
-	def verifier_organisateur
-		@organisateur.cartes.each do |carte|
-			return false if !carte.estMorte
-		end
 
-		return true
-	end
-
-	def verifier_joueur_b
-		@joueur_b.cartes.each do |carte|
-			return false if !carte.estMorte
-		end
-
-		return true
-	end
-
-	# Ce n'est pas une bonne idée de tricher
+	# Ce n'est pas une bonne idée de tricher, sert aussi à récupérer 
 	def verifierTour(joueur)
 		return [@organisateur, @joueur_b] if @tour_joueur == 0 && joueur == @organisateur
 
@@ -331,19 +231,36 @@ class	Partie
 		return false
 	end
 
-	def finPartie
-		@organisateur.partie = nil
-		@joueur_b.partie = nil
+	def donnerGagnant(joueur_gagnant)
+
+		if joueur_gagnant == @organisateur
+			@tour_joueur = 2
+		else
+			@tour_joueur = 3
+		end
 
 		@termine = true
+		
 	end
 
 	def abandonner(joueur)
 		
 	end
 
-	def verifierTempsReponse
-		
+	def verifierCartes(joueur)
+		joueur.cartes.each do |carte|
+			return false if !carte.estMorte
+		end
+
+		return true
+	end
+
+	def verifierTempsReponse(joueur)
+			
+	end
+
+	def informationsPartie
+		verifierFinPartie
 	end
 
 end
