@@ -15,11 +15,11 @@ class Joueur
 
 	@partie = nil
 
-	@temps_reponse = nil
+	@date_reponse = nil
 	@message = false
 
 	attr_accessor :partie, :carte_slot, :message
-	attr_reader :cartes, :nom, :element, :id, :session, :niveau, :invalide, :temps_reponse
+	attr_reader :cartes, :nom, :element, :id, :session, :niveau, :invalide, :date_reponse
 
 	def initialize(session)
 
@@ -106,7 +106,7 @@ class Joueur
 	end
 
 	def enVie
-		@temps_reponse = Time.now
+		@date_reponse = Time.now
 	end
 
 	def attaquer

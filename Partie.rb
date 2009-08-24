@@ -235,6 +235,7 @@ class	Partie
 
 		if joueur_gagnant == @organisateur
 			@tour_joueur = 2
+			$ami_php.finPartie(@organisateur, @joueur_b)
 		else
 			@tour_joueur = 3
 		end
@@ -255,12 +256,24 @@ class	Partie
 		return true
 	end
 
-	def verifierTempsReponse(joueur)
-			
+	def verifierDateReponses
+		now = Time.now
+
+		if @organisateur.date_reponse + 180 < now || @joueur_b.date_reponse + 180 < now
+			if @organisateur.date_reponse > @joueur_b.date_reponse
+				donnerGagnant @organisateur
+			else
+				donnerGagnant @joueur_b
+			end
+		end
 	end
 
-	def informationsPartie
+	def informationsPartie(joueur)
 		verifierFinPartie
+
+		informations = {
+			:mes_cartes	=> 
+		}
 	end
 
 end
