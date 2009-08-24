@@ -30,22 +30,8 @@ class ListeParties < Mongrel::HttpHandler
 
 			$parties.each do |id, partie|
 				if partie.dansLaListe	
-					json = {
-						"id" => id,
-						"nom"=> partie.nom,
-						"organisateur"=> partie.organisateur.nom,
-						"id_organisateur"=>partie.organisateur.id,
-						"niveau"=>partie.organisateur.niveau,
-						"element"=>partie.organisateur.element
-					}
 
-					if partie.mdp.nil? || partie.mdp == ''
-						json["mdp"] = false 
-					else
-						json["mdp"] = true
-					end
-
-					obj.push json
+					obj.push partie.getJSON
 				end
 			end
 		

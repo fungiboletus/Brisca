@@ -122,6 +122,26 @@ class	Partie
 		return true
 	end
 
+	def getJSON
+		
+		json = {
+			"id" =>				@id,
+			"nom"=> 			@nom,
+			"organisateur"=> 	@organisateur.nom,
+			"id_organisateur"=>	@organisateur.id,
+			"niveau"=>			@organisateur.niveau,
+			"element"=>			@organisateur.element
+		}
+
+		if partie.mdp.nil? || partie.mdp == ''
+			json["mdp"] = false 
+		else
+			json["mdp"] = true
+		end
+
+		return json
+	end
+
 	def changerTour
 		@tour_joueur = (@tour_joueur + 1) % 2
 		@nombre_tour += 1
