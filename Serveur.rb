@@ -151,10 +151,6 @@ class ListeParties < Mongrel::HttpHandler
 				joueur.abandonner
 			end
 
-		when "fin_partie"
-			# Il faut libérer le joueur de la partie
-			joueur.partie = nil
-
 		else
 			LOG.warn "L'action demandée n'a pas été trouvée"
 		end
