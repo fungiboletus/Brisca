@@ -5,24 +5,6 @@ require "digest"
 require "json"
 
 class PHPFriend
-	
-	def initialize
-
-		@user_agent = "PoneyServeur"
-		@referer	= "http://perdu.com/"
-		@timeout	= 2
-		
-		@url_connexion	= "http://www.elementz.fr/jeu/connecte.php"
-		@url_cartes		= "http://www.elementz.fr/jeu/deck.php"
-		@url_fin_partie	= "http://www.elementz.fr/jeu/fin_partie.php"
-
-		@nom_param_session = "?PHPSESSID="
-		
-#@nom_param_session = ""
-#@url_connexion	= "http://localhost/lol2/"
-#@url_cartes		= "http://localhost/lol2/"
-#@url_fin_partie	= "http://localhost/lol2/"
-	end
 
 	def load_url(url)
 		LOG.info "Chargement de l'url: #{url}"
@@ -35,15 +17,15 @@ class PHPFriend
 
 		begin
 
-			Timeout::timeout(@timeout) do
+			Timeout::timeout(TIMEOUT) do
 				http = Net::HTTP.new(uri.host, uri.port)
 
 				salut = uri.path
 				salut = "#{salut}?#{uri.query}" if uri.query				
 
 				code, data = http.get(salut, {
-					"User-Agent"	=> @user_agent,
-					"Referer"		=> @referer
+					"User-Agent"	=> USER_AGENT,
+					"Referer"		=> REFERER_SERVEUR
 				})
 
 				if code.code != "200"
@@ -65,7 +47,7 @@ class PHPFriend
 	end
 
 	def connecte(session)
-		code = load_url(@url_connexion + @nom_param_session+session)
+		code = load_url(URL_CONNEXION + NOM_PARAM_SESSION+session)
 
 		json = JSON.parse code
 		LOG.debug json
@@ -74,7 +56,7 @@ class PHPFriend
 	end
 
 	def getCartes(joueur)
-		code = load_url(@url_cartes + @nom_param_session+joueur.session)
+		code = load_url(URL_CARTES + NOM_PARAM_SESSION+joueur.session)
 		
 		json = JSON.parse code
 		LOG.debug json
@@ -83,7 +65,7 @@ class PHPFriend
 	end
 
 	def finPartie(gagnant, perdant)
-#load_url(@url_fin_partie + @nom_param_session+gagnant.session+'?gagne=true')
-#load_url(@url_fin_partie + @nom_param_session+perdant.session+'?gagne=false')
+		load_url(URL_FIN_PARTIE + NOM_PARAM_SESSION+gagnant.session+'?gagne=true')
+		load_url(URL_FIN_PARTIE + NOM_PARAM_SESSION+perdant.session+'?gagne=false')
 	end
 end
