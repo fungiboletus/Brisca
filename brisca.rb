@@ -35,6 +35,9 @@ loop do
 	when "lol"
 		puts "Oui, c'est rigolo"
 
+	when "jtm"
+		puts "Moi aussi je t'aime"
+
 	else
 		puts "Désolé, mais \"#{commande}\", je ne sais pas ce que c'est ^^'"
 	
